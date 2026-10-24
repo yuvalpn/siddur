@@ -1,351 +1,100 @@
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>סידור חכם דינמי</title>
-  
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1e293b">
-  
-  <!-- גופנים -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
+import os
+import re
+import json
+import zipfile
+import requests
+from google.colab import files
 
-  <!-- ספריית חישוב תאריכים וזמנים עבריים מובנית -->
-  <script src="https://cdn.jsdelivr.net/npm/@hebcal/core@5.7.0/dist/bundle.min.js"></script>
+BASE_URL = "https://www.sefaria.org/api/texts/"
+HEADERS = {"User-Agent": "SmartSiddurApp/1.0"}
 
-  <style>
-    :root {
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --text: #0f172a;
-      --header-bg: #1e293b;
-      --accent: #2563eb;
-      --highlight: #fef08a;
-      --highlight-text: #854d0e;
-      --border: #e2e8f0;
-      --font-size: 20px;
-    }
+def clean_hebrew_text(raw_text):
+    """ניקוי תגיות HTML, הערות ורווחים עודפים"""
+    if isinstance(raw_text, list):
+        return [clean_hebrew_text(t) for t in raw_text if t]
+    if not isinstance(raw_text, str):
+        return ""
+    text = re.sub(r'<[^>]+>', '', raw_text)
+    text = re.sub(r'[\(\[].*?[\)\]]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
-    [data-theme="dark"] {
-      --bg: #090d16;
-      --card-bg: #131c2e;
-      --text: #f1f5f9;
-      --header-bg: #030712;
-      --accent: #38bdf8;
-      --highlight: #854d0e;
-      --highlight-text: #fef08a;
-      --border: #1e293b;
-    }
+def fetch_sefaria(ref):
+    """שליפת טקסט מספריא לפי נתיב מדויק"""
+    print(f"מושך: {ref}...")
+    url = f"{BASE_URL}{requests.utils.quote(ref)}?context=0&commentary=0"
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=15)
+        if res.status_code == 200:
+            data = res.json()
+            return clean_hebrew_text(data.get("he", ""))
+        else:
+            print(f"שגיאה {res.status_code} עבור {ref}")
+            return ""
+    except Exception as e:
+        print(f"שגיאת תקשורת ב-{ref}: {e}")
+        return ""
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Frank Ruhl Libre', serif; line-height: 1.8; }
-    
-    header {
-      position: sticky; top: 0; z-index: 100;
-      background: var(--header-bg); color: #fff;
-      padding: 12px 16px;
-      display: flex; justify-content: space-between; align-items: center;
-      font-family: 'Assistant', sans-serif;
-    }
+os.makedirs("data", exist_ok=True)
 
-    .status-bar {
-      background: #334155; color: #cbd5e1;
-      padding: 6px 16px; font-size: 0.85rem;
-      font-family: 'Assistant', sans-serif;
-      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
-    }
+# 1. שחרית, מנחה וערבית לחול
+shacharit_map = {
+    "birkat_hashachar": "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Asher Yatzar",
+    "birkot_hatorah": "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Torah Study",
+    "pesukei_dezimra": "Siddur Ashkenaz, Weekday, Shacharit, Pesukei Dezimra, Ashrei",
+    "shema_and_blessings": "Siddur Ashkenaz, Weekday, Shacharit, Blessings of the Shema, Shema",
+    "amidah": "Siddur Ashkenaz, Weekday, Shacharit, Amidah, Patriarchs",
+    "aleinu": "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Aleinu"
+}
+with open("data/shacharit.json", "w", encoding="utf-8") as f:
+    json.dump({k: fetch_sefaria(v) for k, v in shacharit_map.items()}, f, ensure_ascii=False, indent=2)
 
-    .badge {
-      background: var(--accent); color: white;
-      padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;
-    }
+mincha_map = {
+    "ashrei": "Siddur Ashkenaz, Weekday, Minchah, Ashrei",
+    "amidah": "Siddur Ashkenaz, Weekday, Minchah, Amida",
+    "aleinu": "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Aleinu"
+}
+with open("data/mincha.json", "w", encoding="utf-8") as f:
+    json.dump({k: fetch_sefaria(v) for k, v in mincha_map.items()}, f, ensure_ascii=False, indent=2)
 
-    .nav-tabs {
-      display: flex; overflow-x: auto; background: var(--card-bg);
-      border-bottom: 1px solid var(--border); padding: 8px; gap: 8px;
-      font-family: 'Assistant', sans-serif;
-    }
+arvit_map = {
+    "barechu": "Siddur Ashkenaz, Weekday, Maariv, Barchu",
+    "shema": "Siddur Ashkenaz, Weekday, Shacharit, Blessings of the Shema, Shema",
+    "amidah": "Siddur Ashkenaz, Weekday, Shacharit, Amidah, Patriarchs",
+    "aleinu": "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Aleinu"
+}
+with open("data/arvit.json", "w", encoding="utf-8") as f:
+    json.dump({k: fetch_sefaria(v) for k, v in arvit_map.items()}, f, ensure_ascii=False, indent=2)
 
-    .tab-btn {
-      padding: 6px 14px; border: 1px solid var(--border);
-      background: var(--bg); color: var(--text); border-radius: 20px;
-      font-weight: 600; white-space: nowrap; cursor: pointer;
-    }
+# 2. מוסף: שבת רגילה, ראש חודש, שבת ראש חודש ושלוש רגלים
+musaf_map = {
+    "shabbat": "Siddur Ashkenaz, Shabbat, Musaf, Amidah",
+    "rosh_chodesh": "Siddur Ashkenaz, Weekday, Rosh Chodesh, Musaf",
+    "shabbat_rosh_chodesh": "Siddur Ashkenaz, Shabbat, Rosh Chodesh, Musaf",
+    "festivals": "Siddur Ashkenaz, Festivals, Musaf, Amidah"
+}
+with open("data/musaf.json", "w", encoding="utf-8") as f:
+    json.dump({k: fetch_sefaria(v) for k, v in musaf_map.items()}, f, ensure_ascii=False, indent=2)
 
-    .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+# 3. הוספות משתנות
+insertions = {
+    "mashiv_haruach": "מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּשֶׁם",
+    "morid_hatal": "מוֹרִיד הַטָּל",
+    "tal_umatar": "וְתֵן טַל וּמָטָר לִבְרָכָה עַל פְּנֵי הָאֲדָמָה",
+    "ten_bracha": "וְתֵן בְּרָכָה עַל פְּנֵי הָאֲדָמָה",
+    "yaaleh_veyavo": "אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, יַעֲלֶה וְיָבֹא וְיַגִּיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵנוּ וּפִקְדוֹנֵנוּ...",
+    "al_hanissim_chanukah": "עַל הַנִּסִּים וְעַל הַפֻּרְקָן... בִּימֵי מַתִּתְיָהוּ בֶן יוֹחָנָן כֹּהֵן גָּדוֹל...",
+    "al_hanissim_purim": "עַל הַנִּסִּים וְעַל הַפֻּרְקָן... בִּימֵי מָרְדֳּכַי וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה..."
+}
+with open("data/insertions.json", "w", encoding="utf-8") as f:
+    json.dump(insertions, f, ensure_ascii=False, indent=2)
 
-    main { max-width: 800px; margin: 0 auto; padding: 16px 16px 80px; }
+# 4. כיווץ והורדה
+zip_name = "siddur_data.zip"
+with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    for root, _, files_list in os.walk("data"):
+        for file in files_list:
+            zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), "."))
 
-    .prayer-card {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 10px; padding: 20px; margin-bottom: 16px;
-      font-size: var(--font-size);
-    }
-
-    h2 { font-family: 'Assistant', sans-serif; font-size: 1.25rem; color: var(--accent); margin-bottom: 12px; }
-
-    /* הדגשות מיוחדות להוספות לפי תאריך */
-    .insertion {
-      background: var(--highlight);
-      color: var(--highlight-text);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: 600;
-      display: inline-block;
-      margin: 2px 0;
-    }
-
-    .hidden { display: none !important; }
-    
-    .instruction {
-      font-family: 'Assistant', sans-serif;
-      font-size: 0.85rem; color: #64748b; margin-bottom: 8px;
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <div>
-      <strong id="app-title">סידור חכם אשכנז</strong>
-    </div>
-    <div style="display: flex; gap: 6px;">
-      <button onclick="changeFontSize(-2)" style="padding: 4px 8px;">א-</button>
-      <button onclick="changeFontSize(2)" style="padding: 4px 8px;">א+</button>
-      <button onclick="toggleTheme()" style="padding: 4px 8px;">🌓</button>
-    </div>
-  </header>
-
-  <div class="status-bar" id="status-bar">
-    <span id="hebrew-date-display">טוען נתונים...</span>
-    <span id="zmanim-display">מחשב זמני יום...</span>
-  </div>
-
-  <nav class="nav-tabs" id="nav-tabs">
-    <button class="tab-btn" data-target="shacharit">שחרית</button>
-    <button class="tab-btn" data-target="mincha">מנחה</button>
-    <button class="tab-btn" data-target="arvit">ערבית</button>
-    <button class="tab-btn" data-target="shabbat">שבת</button>
-  </nav>
-
-  <main>
-    <!-- שחרית חול -->
-    <section id="shacharit" class="prayer-content">
-      <div class="prayer-card">
-        <h2>ברכות השחר</h2>
-        <p>בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר נָתַן לַשֶּׂכְוִי בִינָה לְהַבְחִין בֵּין יוֹם וּבֵין לָיְלָה...</p>
-      </div>
-
-      <div class="prayer-card">
-        <h2>תפילת העמידה (שחרית)</h2>
-        <p class="instruction">עומדים ברגליים ישרות ופונים לירושלים</p>
-        <p>אֲדֹנָי שְׂפָתַי תִּפְתָּח, וּפִי יַגִּיד תְּהִלָּתֶךָ.</p>
-        <p>בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק, וֵאלֹהֵי יַעֲקֹב...</p>
-        
-        <!-- גבורות: גשם / טל -->
-        <p>
-          אַתָּה גִּבּוֹר לְעוֹלָם אֲדֹנָי, מְחַיֶּה מֵתִים אַתָּה, רַב לְהוֹשִׁיעַ,
-          <span id="mashiv-haruach" class="insertion">מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּשֶׁם</span>
-          <span id="morid-hatal" class="insertion hidden">מוֹרִיד הַטָּל</span>,
-          מְכַלְכֵּל חַיִּים בְּחֶסֶד...
-        </p>
-
-        <!-- ברכת השנים: טל ומטר / ברכה -->
-        <p>
-          בָּרֵךְ עָלֵינוּ ה' אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת...
-          <span id="tal-umatar" class="insertion">וְתֵן טַל וּמָטָר לִבְרָכָה</span>
-          <span id="ten-bracha" class="insertion hidden">וְתֵן בְּרָכָה</span>
-          עַל פְּנֵי הָאֲדָמָה...
-        </p>
-
-        <!-- יעלה ויבוא (מותנה) -->
-        <div id="yaaleh-veyavo" class="insertion hidden" style="display: block; margin: 10px 0;">
-          <strong>יעלה ויבוא (ראש חודש / מועד):</strong><br>
-          אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, יַעֲלֶה וְיָבֹא וְיַגִּיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵנוּ וּפִקְדוֹנֵנוּ...
-        </div>
-
-        <!-- על הנסים (חנוכה ופורים) -->
-        <div id="al-hanissim" class="insertion hidden" style="display: block; margin: 10px 0;">
-          <strong>על הנסים:</strong><br>
-          עַל הַנִּסִּים וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת...
-        </div>
-      </div>
-
-      <!-- תחנון: מותנה אוטומטית -->
-      <div id="tachanun-section" class="prayer-card">
-        <h2>תחנון</h2>
-        <div class="instruction">מניחים ראש על הזרוע ויושבים:</div>
-        <p>רַחוּם וְחַנּוּן, חָטָאתִי לְפָנֶיךָ, ה' מָלֵא רַחֲמִים, רַחֵם עָלַי וְקַבֵּל תַּחֲנוּנָי...</p>
-      </div>
-
-      <div id="no-tachanun-msg" class="prayer-card hidden">
-        <p style="color: #16a34a; font-weight: bold;">אין אומרים תחנון היום.</p>
-      </div>
-    </section>
-
-    <!-- מנחה -->
-    <section id="mincha" class="prayer-content hidden">
-      <div class="prayer-card">
-        <h2>מנחה לחול</h2>
-        <p>אַשְׁרֵי יוֹשְׁבֵי בֵיתֶךָ, עוֹד יְהַלְלוּךָ סֶּלָה...</p>
-      </div>
-    </section>
-
-    <!-- ערבית -->
-    <section id="arvit" class="prayer-content hidden">
-      <div class="prayer-card">
-        <h2>ערבית לחול</h2>
-        <p>וְהוּא רַחוּם יְכַפֵּר עָו‍ֹן וְלֹא יַשְׁחִית, וְהִרְבָּה לְהָשִׁיב אַפּוֹ, וְלֹא יָעִיר כָּל חֲמָתוֹ...</p>
-        <div id="omer-section" class="insertion hidden" style="display: block; margin-top: 15px;">
-          <strong>ספירת העומר:</strong>
-          <p id="omer-text">היום...</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- שבת -->
-    <section id="shabbat" class="prayer-content hidden">
-      <div class="prayer-card">
-        <h2>שבת קודש</h2>
-        <p>מִזְמוֹר שִׁיר לְיוֹם הַשַּׁבָּת: טוֹב לְהֹדוֹת לַה' וּלְזַמֵּר לְשִׁמְךָ עֶלְיוֹן...</p>
-      </div>
-    </section>
-  </main>
-
-  <script>
-    let currentFontSize = 20;
-
-    // אתחול לוח השנה והמיקום
-    window.addEventListener('DOMContentLoaded', () => {
-      initHebrewCalendar();
-      setupTabs();
-    });
-
-    function initHebrewCalendar() {
-      // ברירת מחדל: ירושלים
-      let lat = 31.7683;
-      let lon = 35.2137;
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            lat = pos.coords.latitude;
-            lon = pos.coords.longitude;
-            evaluateLiturgy(lat, lon);
-          },
-          err => {
-            evaluateLiturgy(lat, lon); // שימוש בברירת מחדל
-          }
-        );
-      } else {
-        evaluateLiturgy(lat, lon);
-      }
-    }
-
-    function evaluateLiturgy(lat, lon) {
-      const now = new Date();
-      const hDate = new window.hebcal.HDate(now);
-      
-      // הצגת תאריך עברי
-      const hebrewDateStr = hDate.renderGematriya();
-      document.getElementById('hebrew-date-display').innerHTML = `📅 יום ${getDayName(now.getDay())}, ${hebrewDateStr}`;
-
-      // קביעת זמני תפילה אוטומטית לפי שעה
-      const currentHour = now.getHours();
-      let defaultTab = 'shacharit';
-      if (hDate.getDay() === 6 || (hDate.getDay() === 5 && currentHour >= 18)) {
-        defaultTab = 'shabbat';
-      } else if (currentHour >= 12 && currentHour < 18) {
-        defaultTab = 'mincha';
-      } else if (currentHour >= 18 || currentHour < 4) {
-        defaultTab = 'arvit';
-      }
-      switchTab(defaultTab);
-
-      // בדיקת התניות הלכתיות
-      applyHalachicConditions(hDate, now);
-    }
-
-    function applyHalachicConditions(hDate, now) {
-      const month = hDate.getMonth();
-      const day = hDate.getDate();
-
-      // 1. גשם או טל (מפסח עד שמיני עצרת: מוריד הטל)
-      const isSummer = (month === 1 && day >= 16) || (month > 1 && month < 7) || (month === 7 && day <= 22);
-      if (isSummer) {
-        document.getElementById('mashiv-haruach').classList.add('hidden');
-        document.getElementById('morid-hatal').classList.remove('hidden');
-      } else {
-        document.getElementById('mashiv-haruach').classList.remove('hidden');
-        document.getElementById('morid-hatal').classList.add('hidden');
-      }
-
-      // 2. ותן טל ומטר (בארץ ישראל מז' בחשוון ועד פסח)
-      const isTalUmatar = (month === 8 && day >= 7) || (month > 8 || month === 1 && day <= 15);
-      if (isTalUmatar) {
-        document.getElementById('tal-umatar').classList.remove('hidden');
-        document.getElementById('ten-bracha').classList.add('hidden');
-      } else {
-        document.getElementById('tal-umatar').classList.add('hidden');
-        document.getElementById('ten-bracha').classList.remove('hidden');
-      }
-
-      // 3. ראש חודש (אמירת יעלה ויבוא + ביטול תחנון)
-      const isRoshChodesh = (day === 1 || day === 30);
-      if (isRoshChodesh) {
-        document.getElementById('yaaleh-veyavo').classList.remove('hidden');
-        disableTachanun("ראש חודש");
-      }
-
-      // 4. חנוכה (כ"ה בכסלו למשך 8 ימים)
-      if (month === 9 && day >= 25) {
-        document.getElementById('al-hanissim').classList.remove('hidden');
-        disableTachanun("חנוכה");
-      }
-    }
-
-    function disableTachanun(reason) {
-      document.getElementById('tachanun-section').classList.add('hidden');
-      const msg = document.getElementById('no-tachanun-msg');
-      msg.classList.remove('hidden');
-      msg.innerHTML = `<p style="color:#16a34a; font-weight:bold;">אין אומרים תחנון היום (${reason}).</p>`;
-    }
-
-    function getDayName(dayIndex) {
-      return ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][dayIndex];
-    }
-
-    function setupTabs() {
-      const buttons = document.querySelectorAll('.tab-btn');
-      buttons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          switchTab(btn.dataset.target);
-        });
-      });
-    }
-
-    function switchTab(targetId) {
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.target === targetId);
-      });
-      document.querySelectorAll('.prayer-content').forEach(p => {
-        p.classList.toggle('hidden', p.id !== targetId);
-      });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function changeFontSize(diff) {
-      currentFontSize = Math.max(14, Math.min(36, currentFontSize + diff));
-      document.documentElement.style.setProperty('--font-size', `${currentFontSize}px`);
-    }
-
-    function toggleTheme() {
-      const current = document.body.getAttribute('data-theme');
-      document.body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-    }
-  </script>
-</body>
-</html>
+print("כל הקבצים נשמרו. מוריד ZIP מעודכן...")
+files.download(zip_name)
