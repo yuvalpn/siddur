@@ -1,15 +1,27 @@
 {
   "name": "סידור חכם אשכנז",
   "short_name": "סידור",
+  "description": "סידור תפילה דינמי נוסח אשכנז הפועל אונליין ואופליין",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#1e293b",
   "theme_color": "#1e293b",
+  "dir": "rtl",
+  "lang": "he",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3389/3389081.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3389/3389081.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
