@@ -1,100 +1,78 @@
-import os
-import re
-import json
-import zipfile
-import requests
-from google.colab import files
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>סידור חכם דינמי</title>
+  
+  <!-- הגדרות PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  
+  <!-- גופנים -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
 
-BASE_URL = "https://www.sefaria.org/api/texts/"
-HEADERS = {"User-Agent": "SmartSiddurApp/1.0"}
+  <!-- ספריית לוח שנה עברי וחישובים הלכתיים -->
+  <script src="https://cdn.jsdelivr.net/npm/@hebcal/core@5.7.0/dist/bundle.min.js"></script>
 
-def clean_hebrew_text(raw_text):
-    """ניקוי תגיות HTML, הערות ורווחים עודפים"""
-    if isinstance(raw_text, list):
-        return [clean_hebrew_text(t) for t in raw_text if t]
-    if not isinstance(raw_text, str):
-        return ""
-    text = re.sub(r'<[^>]+>', '', raw_text)
-    text = re.sub(r'[\(\[].*?[\)\]]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --header-bg: #1e293b;
+      --accent: #2563eb;
+      --highlight: #fef08a;
+      --highlight-text: #854d0e;
+      --border: #e2e8f0;
+      --font-size: 20px;
+    }
 
-def fetch_sefaria(ref):
-    """שליפת טקסט מספריא לפי נתיב מדויק"""
-    print(f"מושך: {ref}...")
-    url = f"{BASE_URL}{requests.utils.quote(ref)}?context=0&commentary=0"
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        if res.status_code == 200:
-            data = res.json()
-            return clean_hebrew_text(data.get("he", ""))
-        else:
-            print(f"שגיאה {res.status_code} עבור {ref}")
-            return ""
-    except Exception as e:
-        print(f"שגיאת תקשורת ב-{ref}: {e}")
-        return ""
+    [data-theme="dark"] {
+      --bg: #090d16;
+      --card-bg: #131c2e;
+      --text: #f1f5f9;
+      --header-bg: #030712;
+      --accent: #38bdf8;
+      --highlight: #854d0e;
+      --highlight-text: #fef08a;
+      --border: #1e293b;
+    }
 
-os.makedirs("data", exist_ok=True)
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Frank Ruhl Libre', serif; line-height: 1.8; }
+    
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--header-bg); color: #fff;
+      padding: 12px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'Assistant', sans-serif;
+    }
 
-# 1. שחרית, מנחה וערבית לחול
-shacharit_map = {
-    "birkat_hashachar": "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Asher Yatzar",
-    "birkot_hatorah": "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Torah Study",
-    "pesukei_dezimra": "Siddur Ashkenaz, Weekday, Shacharit, Pesukei Dezimra, Ashrei",
-    "shema_and_blessings": "Siddur Ashkenaz, Weekday, Shacharit, Blessings of the Shema, Shema",
-    "amidah": "Siddur Ashkenaz, Weekday, Shacharit, Amidah, Patriarchs",
-    "aleinu": "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Aleinu"
-}
-with open("data/shacharit.json", "w", encoding="utf-8") as f:
-    json.dump({k: fetch_sefaria(v) for k, v in shacharit_map.items()}, f, ensure_ascii=False, indent=2)
+    .install-btn {
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-family: 'Assistant', sans-serif;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .install-btn:hover { background: #15803d; }
 
-mincha_map = {
-    "ashrei": "Siddur Ashkenaz, Weekday, Minchah, Ashrei",
-    "amidah": "Siddur Ashkenaz, Weekday, Minchah, Amida",
-    "aleinu": "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Aleinu"
-}
-with open("data/mincha.json", "w", encoding="utf-8") as f:
-    json.dump({k: fetch_sefaria(v) for k, v in mincha_map.items()}, f, ensure_ascii=False, indent=2)
+    .status-bar {
+      background: #334155; color: #cbd5e1;
+      padding: 6px 16px; font-size: 0.85rem;
+      font-family: 'Assistant', sans-serif;
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    }
 
-arvit_map = {
-    "barechu": "Siddur Ashkenaz, Weekday, Maariv, Barchu",
-    "shema": "Siddur Ashkenaz, Weekday, Shacharit, Blessings of the Shema, Shema",
-    "amidah": "Siddur Ashkenaz, Weekday, Shacharit, Amidah, Patriarchs",
-    "aleinu": "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Aleinu"
-}
-with open("data/arvit.json", "w", encoding="utf-8") as f:
-    json.dump({k: fetch_sefaria(v) for k, v in arvit_map.items()}, f, ensure_ascii=False, indent=2)
-
-# 2. מוסף: שבת רגילה, ראש חודש, שבת ראש חודש ושלוש רגלים
-musaf_map = {
-    "shabbat": "Siddur Ashkenaz, Shabbat, Musaf, Amidah",
-    "rosh_chodesh": "Siddur Ashkenaz, Weekday, Rosh Chodesh, Musaf",
-    "shabbat_rosh_chodesh": "Siddur Ashkenaz, Shabbat, Rosh Chodesh, Musaf",
-    "festivals": "Siddur Ashkenaz, Festivals, Musaf, Amidah"
-}
-with open("data/musaf.json", "w", encoding="utf-8") as f:
-    json.dump({k: fetch_sefaria(v) for k, v in musaf_map.items()}, f, ensure_ascii=False, indent=2)
-
-# 3. הוספות משתנות
-insertions = {
-    "mashiv_haruach": "מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּשֶׁם",
-    "morid_hatal": "מוֹרִיד הַטָּל",
-    "tal_umatar": "וְתֵן טַל וּמָטָר לִבְרָכָה עַל פְּנֵי הָאֲדָמָה",
-    "ten_bracha": "וְתֵן בְּרָכָה עַל פְּנֵי הָאֲדָמָה",
-    "yaaleh_veyavo": "אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, יַעֲלֶה וְיָבֹא וְיַגִּיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵנוּ וּפִקְדוֹנֵנוּ...",
-    "al_hanissim_chanukah": "עַל הַנִּסִּים וְעַל הַפֻּרְקָן... בִּימֵי מַתִּתְיָהוּ בֶן יוֹחָנָן כֹּהֵן גָּדוֹל...",
-    "al_hanissim_purim": "עַל הַנִּסִּים וְעַל הַפֻּרְקָן... בִּימֵי מָרְדֳּכַי וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה..."
-}
-with open("data/insertions.json", "w", encoding="utf-8") as f:
-    json.dump(insertions, f, ensure_ascii=False, indent=2)
-
-# 4. כיווץ והורדה
-zip_name = "siddur_data.zip"
-with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-    for root, _, files_list in os.walk("data"):
-        for file in files_list:
-            zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), "."))
-
-print("כל הקבצים נשמרו. מוריד ZIP מעודכן...")
-files.download(zip_name)
+    .nav-tabs {
+      display: flex; overflow-x: auto; background
