@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>סידור שבת אשכנז</title>
+  
+  <!-- PWA & Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- גופן מותאם לטקסט עברי מנוקד -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #fdfbf7;
+      --card-bg: #ffffff;
+      --text-color: #1a1a1a;
+      --header-bg: #1e293b;
+      --header-text: #f8fafc;
+      --accent: #2563eb;
+      --border-color: #e2e8f0;
+      --font-size: 20px;
+      --font-family: 'Frank Ruhl Libre', serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-color: #e2e8f0;
+      --header-bg: #020617;
+      --header-text: #f8fafc;
+      --accent: #38bdf8;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-family);
+      line-height: 1.8;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      font-family: 'Assistant', sans-serif;
+    }
+
+    .title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    nav {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 16px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      font-family: 'Assistant', sans-serif;
+    }
+
+    .nav-tab {
+      padding: 8px 14px;
+      border: none;
+      background: none;
+      color: var(--text-color);
+      font-weight: 600;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .nav-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+    }
+
+    .prayer-section {
+      display: none;
+    }
+
+    .prayer-section.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 18px;
+      font-size: var(--font-size);
+    }
+
+    h2 {
+      font-family: 'Assistant', sans-serif;
+      font-size: 1.3rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+
+    .instructions {
+      font-size: 0.85em;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-family: 'Assistant', sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title">סידור שבת אשכנז</div>
+    <div class="controls">
+      <button class="btn" id="font-dec" title="הקטן גופן">א-</button>
+      <button class="btn" id="font-inc" title="הגדל גופן">א+</button>
+      <button class="btn" id="theme-toggle" title="החלף מצב תצוגה">🌙</button>
+    </div>
+  </header>
+
+  <nav id="prayer-nav">
+    <button class="nav-tab active" data-target="kabbalat-shabbat">קבלת שבת</button>
+    <button class="nav-tab" data-target="arvit">ערבית</button>
+    <button class="nav-tab" data-target="shacharit">שחרית</button>
+    <button class="nav-tab" data-target="musaf">מוסף</button>
+    <button class="nav-tab" data-target="mincha">מנחה לשבת</button>
+  </nav>
+
+  <main>
+    <!-- קבלת שבת -->
+    <section id="kabbalat-shabbat" class="prayer-section active">
+      <div class="card">
+        <h2>מזמור צ"ה - לכו נרננה</h2>
+        <p>לְכוּ נְרַנְּנָה לַה', נָרִיעָה לְצוּר יִשְׁעֵנוּ: נְקַדְּמָה פָנָיו בְּתוֹדָה, בִּזְמִרוֹת נָרִיעַ לוֹ: כִּי אֵל גָּדוֹל ה', וּמֶלֶךְ גָּדוֹל עַל כָּל אֱלֹהִים...</p>
+      </div>
+      <div class="card">
+        <h2>לכה דודי</h2>
+        <div class="instructions">עומדים ופונים מערבה בבית האחרון:</div>
+        <p>לְכָה דוֹדִי לִקְרַאת כַּלָּה, פְּנֵי שַׁבָּת נְקַבְּלָה...</p>
+        <p>בּוֹאִי בְשָׁלוֹם עֲטֶרֶת בַּעְלָהּ, גַּם בְּשִׂמְחָה וּבְצָהֳלָה, תּוֹךְ אֱמוּנֵי עַם סְגֻלָּה, בּוֹאִי כַלָּה בּוֹאִי כַלָּה, בּוֹאִי כַלָּה שַׁבָּת מַלְכְּתָא.</p>
+      </div>
+    </section>
+
+    <!-- ערבית -->
+    <section id="arvit" class="prayer-section">
+      <div class="card">
+        <h2>תפילת עמידה - ליל שבת</h2>
+        <div class="instructions">עומדים לכיוון ירושלים ברגליים צמודות:</div>
+        <p>אַתָּה קִדַּשְׁתָּ אֶת יוֹם הַשְּׁבִיעִי לִשְׁמֶךָ, תַּכְלִית מַעֲשֵׂה שָׁמַיִם וָאָרֶץ, וּבֵרַכְתּוֹ מִכָּל הַיָּמִים, וְקִדַּשְׁתּוֹ מִכָּל הַזְּמַנִּים, וְכֵן כָּתוּב בְּתוֹרָתֶךָ:</p>
+      </div>
+    </section>
+
+    <!-- שחרית -->
+    <section id="shacharit" class="prayer-section">
+      <div class="card">
+        <h2>אל אדון</h2>
+        <p>אֵל אָדוֹן עַל כָּל הַמַּעֲשִׂים, בָּרוּךְ וּמְבֹרָךְ בְּפִי כָּל הַנְּשָׁמָה. גָּדְלוֹ וְטוּבוֹ מָלֵא עוֹלָם, דַּעַת וּתְבוּנָה סוֹבְבִים הוֹדוֹ...</p>
+      </div>
+      <div class="card">
+        <h2>עמידה - שחרית</h2>
+        <p>יִשְׂמַח מֹשֶׁה בְּמַתְּנַת חֶלְקוֹ, כִּי עֶבֶד נֶאֱמָן קָרָאתָ לּוֹ, כְּלִיל תִּפְאֶרֶת בְּרֹאשׁוֹ נָתַתָּ, בְּעָמְדוֹ לְפָנֶיךָ עַל הַר סִינַי...</p>
+      </div>
+    </section>
+
+    <!-- מוסף -->
+    <section id="musaf" class="prayer-section">
+      <div class="card">
+        <h2>עמידה - מוסף</h2>
+        <p>תִּכַּנְתָּ שַׁבָּת רָצִיתָ קָרְבְּנוֹתֶיהָ, צִוִּיתָ פֵּרוּשֶׁיהָ עִם סִדּוּרֵי נְסָכֶיהָ, מְעַנְּגֶיהָ לְעוֹלָם כָּבוֹד יִנְחָלוּ, טוֹעֲמֶיהָ חַיִּים זָכוּ...</p>
+      </div>
+    </section>
+
+    <!-- מנחה -->
+    <section id="mincha" class="prayer-section">
+      <div class="card">
+        <h2>עמידה - מנחה לשבת</h2>
+        <p>אַתָּה אֶחָד וְשִׁמְךָ אֶחָד, וּמִי כְּעַמְּךָ יִשְׂרָאֵל גּוֹי אֶחָד בָּאָרֶץ. תִּפְאֶרֶת גְּדֻלָּה וַעֲטֶרֶת יְשׁוּעָה, יוֹם מְנוּחָה וּקְדֻשָּׁה לְעַמְּךָ נָתָתָּ...</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ניווט בין תפילות
+    const tabs = document.querySelectorAll('.nav-tab');
+    const sections = document.querySelectorAll('.prayer-section');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        sections.forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.target).classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
+    // שינוי גודל גופן
+    let currentSize = 20;
+    const body = document.documentElement;
+
+    document.getElementById('font-inc').addEventListener('click', () => {
+      if (currentSize < 34) {
+        currentSize += 2;
+        body.style.setProperty('--font-size', `${currentSize}px`);
+      }
+    });
+
+    document.getElementById('font-dec').addEventListener('click', () => {
+      if (currentSize > 14) {
+        currentSize -= 2;
+        body.style.setProperty('--font-size', `${currentSize}px`);
+      }
+    });
+
+    // מצב לילה
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.body.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.body.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      } else {
+        document.body.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      }
+    });
+
+    // רישום Service Worker לעבודה ללא אינטרנט
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW failed', err));
+      });
+    }
+  </script>
+</body>
+</html>
